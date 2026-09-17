@@ -204,16 +204,17 @@ app.post('/api/history', (req, res) => {
   }
 });
 
-// POST /api/certificate - Generate PDF certificate via Node.js
+// POST /api/certificate - Generate PDF consolidated certificate via Node.js
 app.post('/api/certificate', async (req, res) => {
   try {
     const {
-      apprenticeName = 'Apprentice',
+      apprenticeName = 'Aprendiz SENA',
       program = 'Gestión Contable y de Información Financiera',
       ficha = 'N/A',
-      score = 0,
-      percentage = 0,
       date = new Date().toLocaleDateString('es-CO'),
+      timeWorkedFormatted = '10 min 0 seg',
+      activitiesCompleted = {},
+      activitiesPending = [],
     } = req.body;
 
     const pdfDoc = await PDFDocument.create();
@@ -228,12 +229,16 @@ app.post('/api/certificate', async (req, res) => {
     const navy = rgb(0.08, 0.18, 0.36);
     const deepNavy = rgb(0.04, 0.09, 0.20);
     const gold = rgb(0.79, 0.63, 0.22);
-    const lightGold = rgb(0.95, 0.91, 0.82);
+    const lightGold = rgb(0.96, 0.93, 0.85);
+    const emerald = rgb(0.12, 0.52, 0.32);
+    const lightEmerald = rgb(0.93, 0.98, 0.94);
+    const alertRose = rgb(0.75, 0.22, 0.22);
+    const lightAmber = rgb(0.98, 0.96, 0.92);
     const slateDark = rgb(0.2, 0.25, 0.3);
     const slateLight = rgb(0.45, 0.5, 0.55);
-    const bgOffWhite = rgb(0.985, 0.985, 0.99);
+    const bgOffWhite = rgb(0.99, 0.99, 0.995);
 
-    // Background tint
+    // Canvas background
     page.drawRectangle({
       x: 0,
       y: 0,
@@ -242,234 +247,185 @@ app.post('/api/certificate', async (req, res) => {
       color: bgOffWhite,
     });
 
-    // Outer Border
+    // Outer Navy Border
     page.drawRectangle({
-      x: 24,
-      y: 24,
-      width: width - 48,
-      height: height - 48,
+      x: 22,
+      y: 22,
+      width: width - 44,
+      height: height - 44,
       borderColor: navy,
       borderWidth: 3.5,
     });
 
     // Inner Gold Border
     page.drawRectangle({
-      x: 34,
-      y: 34,
-      width: width - 68,
-      height: height - 68,
+      x: 32,
+      y: 32,
+      width: width - 64,
+      height: height - 64,
       borderColor: gold,
       borderWidth: 1.2,
     });
 
-    // Corner accents
-    const corners = [
-      { x: 40, y: height - 40 },
-      { x: width - 40, y: height - 40 },
-      { x: 40, y: 40 },
-      { x: width - 40, y: 40 },
-    ];
-    corners.forEach(c => {
+    // Corners
+    [
+      { x: 38, y: height - 38 },
+      { x: width - 38, y: height - 38 },
+      { x: 38, y: 38 },
+      { x: width - 38, y: 38 },
+    ].forEach((c) => {
       page.drawSquare({ x: c.x - 4, y: c.y - 4, size: 8, color: gold });
     });
 
     // Top Header Banner
-    const subOrg = 'GESTIÓN CONTABLE Y DE INFORMACIÓN FINANCIERA • ENGLISH FOR ACCOUNTING';
-    const subOrgWidth = fontHelveticaBold.widthOfTextAtSize(subOrg, 9.5);
-    page.drawText(subOrg, {
-      x: (width - subOrgWidth) / 2,
-      y: height - 72,
-      size: 9.5,
-      font: fontHelveticaBold,
-      color: gold,
-    });
+    const org = 'SERVICIO NACIONAL DE APRENDIZAJE - SENA • CENTRO DE SERVICIOS FINANCIEROS';
+    const oW = fontHelveticaBold.widthOfTextAtSize(org, 9.5);
+    page.drawText(org, { x: (width - oW) / 2, y: height - 62, size: 9.5, font: fontHelveticaBold, color: gold });
 
-    const activityTag = 'ACCOUNTING DEMONSTRATIVES CHALLENGE';
-    const activityWidth = fontHelveticaBold.widthOfTextAtSize(activityTag, 13);
-    page.drawText(activityTag, {
-      x: (width - activityWidth) / 2,
-      y: height - 94,
-      size: 13,
-      font: fontHelveticaBold,
-      color: navy,
-    });
+    const dept = 'GESTIÓN CONTABLE Y DE INFORMACIÓN FINANCIERA • ENGLISH FOR ACCOUNTING';
+    const dW = fontHelveticaBold.widthOfTextAtSize(dept, 11);
+    page.drawText(dept, { x: (width - dW) / 2, y: height - 78, size: 11, font: fontHelveticaBold, color: navy });
 
-    // Decorative divider
+    // Divider
     page.drawLine({
-      start: { x: width / 2 - 120, y: height - 106 },
-      end: { x: width / 2 + 120, y: height - 106 },
+      start: { x: width / 2 - 160, y: height - 86 },
+      end: { x: width / 2 + 160, y: height - 86 },
       thickness: 1,
       color: gold,
     });
 
     // Main Certificate Title
-    const titleText = 'CERTIFICATE OF COMPLETION';
-    const titleWidth = fontTimesBold.widthOfTextAtSize(titleText, 32);
-    page.drawText(titleText, {
-      x: (width - titleWidth) / 2,
-      y: height - 148,
-      size: 32,
-      font: fontTimesBold,
-      color: deepNavy,
-    });
+    const titleText = 'CERTIFICADO CONSOLIDADO DE COMPETENCIA BILINGÜE';
+    const tW = fontTimesBold.widthOfTextAtSize(titleText, 21);
+    page.drawText(titleText, { x: (width - tW) / 2, y: height - 114, size: 21, font: fontTimesBold, color: deepNavy });
 
-    const presentedText = 'This certificate is proudly presented to:';
-    const presentedWidth = fontTimesRoman.widthOfTextAtSize(presentedText, 14);
-    page.drawText(presentedText, {
-      x: (width - presentedWidth) / 2,
-      y: height - 188,
-      size: 14,
-      font: fontTimesRoman,
-      color: slateDark,
-    });
+    const subTitleText = 'EVALUACIÓN INTEGRAL DE ACTIVIDADES: FOTOGRAFÍAS Y COMPRENSIÓN AUDITIVA';
+    const stW = fontHelveticaBold.widthOfTextAtSize(subTitleText, 9);
+    page.drawText(subTitleText, { x: (width - stW) / 2, y: height - 128, size: 9, font: fontHelveticaBold, color: slateLight });
+
+    // Preamble
+    const pre = 'El Servicio Nacional de Aprendizaje (SENA) certifica el desempeño académico de:';
+    const pW = fontTimesRoman.widthOfTextAtSize(pre, 12);
+    page.drawText(pre, { x: (width - pW) / 2, y: height - 152, size: 12, font: fontTimesRoman, color: slateDark });
 
     // Apprentice Name
-    const nameText = String(apprenticeName).toUpperCase();
-    const nameWidth = fontTimesBold.widthOfTextAtSize(nameText, 26);
-    page.drawText(nameText, {
-      x: (width - nameWidth) / 2,
-      y: height - 232,
-      size: 26,
-      font: fontTimesBold,
-      color: navy,
-    });
+    const nameUpper = String(apprenticeName).toUpperCase();
+    const nW = fontTimesBold.widthOfTextAtSize(nameUpper, 22);
+    page.drawText(nameUpper, { x: (width - nW) / 2, y: height - 180, size: 22, font: fontTimesBold, color: navy });
 
     page.drawLine({
-      start: { x: (width - Math.max(nameWidth + 60, 300)) / 2, y: height - 240 },
-      end: { x: (width + Math.max(nameWidth + 60, 300)) / 2, y: height - 240 },
+      start: { x: (width - Math.max(nW + 80, 320)) / 2, y: height - 188 },
+      end: { x: (width + Math.max(nW + 80, 320)) / 2, y: height - 188 },
       thickness: 1.5,
       color: gold,
     });
 
-    // Commendation
-    const bodyText1 = 'For successfully completing the Accounting Demonstratives Challenge and';
-    const bodyText2 = 'practicing the accurate contextual use of THIS, THAT, THESE and THOSE in English.';
-    const b1Width = fontHelvetica.widthOfTextAtSize(bodyText1, 12);
-    const b2Width = fontHelvetica.widthOfTextAtSize(bodyText2, 12);
+    // Program and Ficha
+    const progFicha = `PROGRAMA: ${program}   |   FICHA: ${ficha}`;
+    const pfW = fontHelveticaBold.widthOfTextAtSize(progFicha, 10.5);
+    page.drawText(progFicha, { x: (width - pfW) / 2, y: height - 206, size: 10.5, font: fontHelveticaBold, color: deepNavy });
 
-    page.drawText(bodyText1, {
-      x: (width - b1Width) / 2,
-      y: height - 275,
-      size: 12,
-      font: fontHelvetica,
-      color: slateDark,
-    });
-
-    page.drawText(bodyText2, {
-      x: (width - b2Width) / 2,
-      y: height - 295,
-      size: 12,
-      font: fontHelvetica,
-      color: slateDark,
-    });
-
-    // Information Box
-    const boxWidth = 560;
-    const boxHeight = 60;
-    const boxX = (width - boxWidth) / 2;
-    const boxY = height - 375;
-
+    // Summary Bar (Time Worked & Date)
+    const barY = height - 248;
+    const barWidth = 752;
+    const barX = (width - barWidth) / 2;
     page.drawRectangle({
-      x: boxX,
-      y: boxY,
-      width: boxWidth,
-      height: boxHeight,
+      x: barX,
+      y: barY,
+      width: barWidth,
+      height: 32,
       color: lightGold,
       borderColor: gold,
       borderWidth: 1,
     });
 
-    page.drawText(`PROGRAM: ${program}`, {
-      x: boxX + 24,
-      y: boxY + 36,
-      size: 11,
-      font: fontHelveticaBold,
-      color: deepNavy,
-    });
+    page.drawText(`FECHA: ${date}`, { x: barX + 16, y: barY + 11, size: 10, font: fontHelveticaBold, color: deepNavy });
+    page.drawText(`TIEMPO TRABAJADO: ${timeWorkedFormatted}`, { x: barX + 235, y: barY + 11, size: 10, font: fontHelveticaBold, color: navy });
 
-    page.drawText(`TRAINING GROUP (FICHA): ${ficha}`, {
-      x: boxX + 24,
-      y: boxY + 14,
-      size: 10,
-      font: fontHelvetica,
-      color: slateDark,
-    });
+    const hasAct1 = Boolean(activitiesCompleted.activity1);
+    const hasAct2 = Boolean(activitiesCompleted.activity2);
+    const doneCount = (hasAct1 ? 1 : 0) + (hasAct2 ? 1 : 0);
+    const statusText = doneCount === 2 ? 'ESTADO: 100% COMPLETADO (2/2 Actividades)' : doneCount === 1 ? 'ESTADO: 50% EN CURSO (1/2 Realizada)' : 'ESTADO: EN FORMACIÓN (0/2)';
+    page.drawText(statusText, { x: barX + 490, y: barY + 11, size: 10, font: fontHelveticaBold, color: doneCount === 2 ? emerald : gold });
 
-    page.drawText(`FINAL SCORE: ${score}/100 (${percentage}%)`, {
-      x: boxX + 230,
-      y: boxY + 14,
-      size: 10,
-      font: fontHelveticaBold,
-      color: navy,
-    });
+    // Two Content Boxes (368 width each)
+    const boxW = 368;
+    const boxH = 150;
+    const boxY = height - 412;
 
-    page.drawText(`DATE: ${date}`, {
-      x: boxX + 410,
-      y: boxY + 14,
-      size: 10,
-      font: fontHelvetica,
-      color: slateDark,
-    });
+    // Box A: Realizadas
+    page.drawRectangle({ x: barX, y: boxY, width: boxW, height: boxH, color: lightEmerald, borderColor: emerald, borderWidth: 1.2 });
+    page.drawRectangle({ x: barX, y: boxY + boxH - 24, width: boxW, height: 24, color: emerald });
+    page.drawText('ACTIVIDADES REALIZADAS (COMPLETED)', { x: barX + 14, y: boxY + boxH - 16, size: 9.5, font: fontHelveticaBold, color: rgb(1, 1, 1) });
 
-    // Instructor sign-off
-    const signX = width / 2 - 130;
-    const signY = 95;
+    let leftY = boxY + boxH - 44;
+    if (!hasAct1 && !hasAct2) {
+      page.drawText('Ninguna actividad completada a la fecha.', { x: barX + 14, y: leftY, size: 9.5, font: fontHelvetica, color: slateDark });
+    }
+    if (hasAct1) {
+      const a1 = activitiesCompleted.activity1;
+      page.drawText('✓ ACTIVIDAD 1: RETO DE FOTOGRAFÍAS (30 IN A ROW)', { x: barX + 14, y: leftY, size: 9.5, font: fontHelveticaBold, color: deepNavy });
+      page.drawText(`• Puntuación: ${a1.score || 100}/100   • Racha: ${a1.streak || 30}/30 in a row`, { x: barX + 22, y: leftY - 14, size: 8.5, font: fontHelveticaBold, color: emerald });
+      page.drawText('• Identificación contextual de THIS, THAT, THESE y THOSE.', { x: barX + 22, y: leftY - 28, size: 8, font: fontHelvetica, color: slateDark });
+      leftY -= 52;
+    }
+    if (hasAct2) {
+      const a2 = activitiesCompleted.activity2;
+      page.drawText('✓ ACTIVIDAD 2: AUDIO & SENTENCE BUILDER (20 FRASES)', { x: barX + 14, y: leftY, size: 9.5, font: fontHelveticaBold, color: deepNavy });
+      page.drawText(`• Frases armadas: ${a2.completedSentences || 20}/20   • Precisión: ${a2.percentage || 100}%`, { x: barX + 22, y: leftY - 14, size: 8.5, font: fontHelveticaBold, color: emerald });
+      page.drawText('• Frases contables sencillas de máximo 5 palabras.', { x: barX + 22, y: leftY - 28, size: 8, font: fontHelvetica, color: slateDark });
+    }
 
-    page.drawLine({
-      start: { x: signX, y: signY },
-      end: { x: signX + 260, y: signY },
-      thickness: 1.2,
-      color: navy,
-    });
+    // Box B: No Realizadas / Pendientes
+    const rightX = barX + boxW + 16;
+    const allDone = doneCount === 2;
+    page.drawRectangle({ x: rightX, y: boxY, width: boxW, height: boxH, color: allDone ? lightGold : lightAmber, borderColor: allDone ? gold : alertRose, borderWidth: 1.2 });
+    page.drawRectangle({ x: rightX, y: boxY + boxH - 24, width: boxW, height: 24, color: allDone ? gold : rgb(0.35, 0.38, 0.44) });
+    page.drawText('ACTIVIDADES NO REALIZADAS / PENDIENTES', { x: rightX + 14, y: boxY + boxH - 16, size: 9.5, font: fontHelveticaBold, color: rgb(1, 1, 1) });
 
-    const instructorTitle = 'English Instructor';
-    const instWidth = fontHelveticaBold.widthOfTextAtSize(instructorTitle, 12);
-    page.drawText(instructorTitle, {
-      x: (width - instWidth) / 2,
-      y: signY - 18,
-      size: 12,
-      font: fontHelveticaBold,
-      color: deepNavy,
-    });
+    let rightY = boxY + boxH - 44;
+    if (allDone) {
+      page.drawText('★ ¡NINGUNA ACTIVIDAD PENDIENTE!', { x: rightX + 14, y: rightY, size: 10, font: fontHelveticaBold, color: emerald });
+      page.drawText('El aprendiz completó el 100% de las actividades formativas', { x: rightX + 14, y: rightY - 16, size: 8.5, font: fontHelvetica, color: slateDark });
+      page.drawText('(Reto de 30 fotos consecutivas y 20 frases de audio contable).', { x: rightX + 14, y: rightY - 30, size: 8.5, font: fontHelveticaBold, color: navy });
+      page.drawText('Cumplimiento total de evidencias académicas bilingües.', { x: rightX + 14, y: rightY - 46, size: 8, font: fontHelvetica, color: slateLight });
+    } else {
+      if (!hasAct1) {
+        page.drawText('✗ ACTIVIDAD 1: RETO DE FOTOGRAFÍAS CONTABLES', { x: rightX + 14, y: rightY, size: 9.5, font: fontHelveticaBold, color: alertRose });
+        page.drawText('• Estado: PENDIENTE POR REALIZAR', { x: rightX + 22, y: rightY - 14, size: 8.5, font: fontHelveticaBold, color: slateDark });
+        page.drawText('• Requisito: Superar 30 aciertos consecutivos in a row.', { x: rightX + 22, y: rightY - 28, size: 8, font: fontHelvetica, color: slateLight });
+        rightY -= 52;
+      }
+      if (!hasAct2) {
+        page.drawText('✗ ACTIVIDAD 2: AUDIO & SENTENCE BUILDER', { x: rightX + 14, y: rightY, size: 9.5, font: fontHelveticaBold, color: alertRose });
+        page.drawText('• Estado: PENDIENTE POR REALIZAR', { x: rightX + 22, y: rightY - 14, size: 8.5, font: fontHelveticaBold, color: slateDark });
+        page.drawText('• Requisito: Escuchar y armar 20 frases contables cortas.', { x: rightX + 22, y: rightY - 28, size: 8, font: fontHelvetica, color: slateLight });
+      }
+    }
 
-    const deptTitle = 'Financial & Accounting Management Training Program';
-    const deptWidth = fontHelvetica.widthOfTextAtSize(deptTitle, 9);
-    page.drawText(deptTitle, {
-      x: (width - deptWidth) / 2,
-      y: signY - 32,
-      size: 9,
-      font: fontHelvetica,
-      color: slateLight,
-    });
+    // Signatures and Footer
+    const signY = 92;
+    const signX = width - 290;
+    page.drawLine({ start: { x: signX, y: signY }, end: { x: signX + 230, y: signY }, thickness: 1.2, color: navy });
+    const instT = 'Instructor(a) de Bilingüismo';
+    const itW = fontHelveticaBold.widthOfTextAtSize(instT, 10.5);
+    page.drawText(instT, { x: signX + (230 - itW) / 2, y: signY - 14, size: 10.5, font: fontHelveticaBold, color: deepNavy });
+    const deptS = 'Gestión Contable y de Información Financiera - SENA';
+    const dsW = fontHelvetica.widthOfTextAtSize(deptS, 8);
+    page.drawText(deptS, { x: signX + (230 - dsW) / 2, y: signY - 26, size: 8, font: fontHelvetica, color: slateLight });
 
     // Seal
-    page.drawCircle({
-      x: 100,
-      y: 100,
-      size: 38,
-      borderColor: gold,
-      borderWidth: 2,
-      color: lightGold,
-    });
-    page.drawCircle({
-      x: 100,
-      y: 100,
-      size: 32,
-      borderColor: navy,
-      borderWidth: 1,
-    });
-    const sealLine1 = 'VERIFIED';
-    const sealLine2 = 'SENA';
-    const s1W = fontHelveticaBold.widthOfTextAtSize(sealLine1, 8);
-    const s2W = fontHelveticaBold.widthOfTextAtSize(sealLine2, 10);
-    page.drawText(sealLine1, { x: 100 - s1W / 2, y: 106, size: 8, font: fontHelveticaBold, color: gold });
-    page.drawText(sealLine2, { x: 100 - s2W / 2, y: 92, size: 10, font: fontHelveticaBold, color: navy });
+    page.drawCircle({ x: 110, y: 95, size: 36, borderColor: gold, borderWidth: 2, color: lightGold });
+    page.drawCircle({ x: 110, y: 95, size: 30, borderColor: navy, borderWidth: 1 });
+    page.drawText('SENA', { x: 97, y: 102, size: 10, font: fontHelveticaBold, color: navy });
+    page.drawText('VERIFIED', { x: 92, y: 92, size: 7.5, font: fontHelveticaBold, color: gold });
+    page.drawText('CONSOLIDADO', { x: 86, y: 83, size: 6, font: fontHelvetica, color: slateDark });
 
     const pdfBytes = await pdfDoc.save();
 
     const sanitizedName = String(apprenticeName).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 40);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="Accounting_Demonstratives_${sanitizedName}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="SENA_Certificado_Consolidado_${sanitizedName}.pdf"`);
     res.send(Buffer.from(pdfBytes));
   } catch (error: any) {
     console.error('Certificate generation error:', error);

@@ -109,10 +109,38 @@ export interface SavedAppState {
   lastUpdated: number;
   currentScreen: AppScreen;
   apprentice: ApprenticeData;
+  totalTimeWorkedSeconds?: number;
   activity1?: Activity1Progress;
   activity2?: Activity2Progress;
   finalResult?: AttemptResult | null;
   activity2Result?: Activity2Result | null;
+}
+
+export interface ConsolidatedCertificateData {
+  apprenticeName: string;
+  program: string;
+  ficha: string;
+  date: string;
+  timeWorkedFormatted: string;
+  timeWorkedSeconds: number;
+  activitiesCompleted: {
+    activity1?: {
+      title: string;
+      score: number;
+      streak: number;
+      date?: string;
+    };
+    activity2?: {
+      title: string;
+      completedSentences: number;
+      totalSentences: number;
+      percentage: number;
+      date?: string;
+    };
+  };
+  activitiesPending: string[];
+  overallPercentage: number;
+  overallStatus: 'completed' | 'partial' | 'started';
 }
 
 export interface ActivitiesStatusSummary {

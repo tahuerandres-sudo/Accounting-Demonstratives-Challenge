@@ -36,7 +36,9 @@ interface WelcomeScreenProps {
   initialData: ApprenticeData;
   activeSession?: ActiveSessionInfo | null;
   activitiesStatus: ActivitiesStatusSummary;
-  onDownloadCertificate: (record: any) => void;
+  timeWorkedFormatted?: string;
+  timeWorkedSeconds?: number;
+  onDownloadCertificate: (record?: any) => void;
   onResumeSession?: () => void;
   onResetSession?: () => void;
   onStartActivity1: (data: ApprenticeData) => void;
@@ -49,6 +51,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   initialData,
   activeSession,
   activitiesStatus,
+  timeWorkedFormatted = '0 min 0 seg',
+  timeWorkedSeconds = 0,
   onDownloadCertificate,
   onResumeSession,
   onResetSession,
@@ -65,7 +69,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   const [selectedActivity, setSelectedActivity] = useState<'activity1' | 'activity2'>(
     activeSession?.activity || 'activity1'
   );
-  const [downloadingType, setDownloadingType] = useState<'activity1' | 'activity2' | null>(null);
+  const [isDownloadingCert, setIsDownloadingCert] = useState(false);
   const [errors, setErrors] = useState<{ fullName?: string; ficha?: string }>({});
 
   // Sync with initialData changes (e.g. if loaded from storage asynchronously)
@@ -112,53 +116,18 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     handleLaunch(selectedActivity);
   };
 
-  // Download Certificate handler
-  const handleTriggerCertificate = async (activityType: 'activity1' | 'activity2') => {
-    setDownloadingType(activityType);
+  // Single Consolidated Certificate Download Handler
+  const handleDownloadConsolidated = async () => {
+    setIsDownloadingCert(true);
     try {
       const currentApprentice = getFormData();
-      const defaultName = currentApprentice.fullName || 'Aprendiz SENA';
-      const defaultFicha = currentApprentice.ficha || 'Gestión Contable';
-
-      if (activityType === 'activity1') {
-        const rec = activitiesStatus.activity1.result || {
-          apprenticeName: defaultName,
-          program: currentApprentice.program,
-          ficha: defaultFicha,
-          score: 100,
-          percentage: 100,
-          date: new Date().toLocaleDateString('es-CO'),
-          performanceLabel: '¡RETO APROBADO! 30 FRASES IN A ROW',
-          activityType: 'activity1',
-        };
-        await onDownloadCertificate({
-          ...rec,
-          apprenticeName: currentApprentice.fullName || rec.apprenticeName,
-          ficha: currentApprentice.ficha || rec.ficha,
-          program: currentApprentice.program || rec.program,
-        });
-      } else {
-        const rec = activitiesStatus.activity2.result || {
-          apprenticeName: defaultName,
-          program: currentApprentice.program,
-          ficha: defaultFicha,
-          score: 20,
-          totalSentences: 20,
-          percentage: 100,
-          date: new Date().toLocaleDateString('es-CO'),
-          performanceLabel: 'Activity 2: 20 Sentences Completed',
-          activityType: 'activity2',
-        };
-        await onDownloadCertificate({
-          ...rec,
-          apprenticeName: currentApprentice.fullName || rec.apprenticeName,
-          ficha: currentApprentice.ficha || rec.ficha,
-          program: currentApprentice.program || rec.program,
-          activityType: 'activity2',
-        });
-      }
+      await onDownloadCertificate({
+        apprenticeName: currentApprentice.fullName || initialData.fullName || 'Aprendiz SENA',
+        ficha: currentApprentice.ficha || initialData.ficha || 'Gestión Contable',
+        program: currentApprentice.program || initialData.program || 'Gestión Contable y de Información Financiera',
+      });
     } finally {
-      setDownloadingType(null);
+      setIsDownloadingCert(false);
     }
   };
 
@@ -233,6 +202,111 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   ? '⚡ 1 completada, 1 pendiente' 
                   : '⏳ 2 actividades pendientes por realizar'}
               </span>
+            </div>
+          </div>
+
+          {/* BANNER / CARD: CERTIFICADO ÚNICO CONSOLIDADO (SOLAMENTE 1 CERTIFICADO CON TODOS LOS DATOS) */}
+          <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-amber-950/30 border-2 border-amber-500/50 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold text-[11px] uppercase tracking-wider flex items-center gap-1">
+                    <Award className="w-3.5 h-3.5 text-amber-400" />
+                    CERTIFICADO ÚNICO CONSOLIDADO SENA
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    • Ambas actividades en un solo documento oficial
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-white">
+                  Certificado de Aptitud Bilingüe en Inglés Contable
+                </h3>
+                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                  Solamente se emite un certificado oficial que consolida los resultados de las <strong>dos actividades</strong>, el <strong>tiempo trabajado</strong>, las <strong>actividades realizadas</strong> y las <strong>actividades pendientes</strong>.
+                </p>
+              </div>
+
+              {/* Botón Único de Descarga */}
+              <button
+                type="button"
+                id="btn-download-consolidated-certificate"
+                onClick={handleDownloadConsolidated}
+                disabled={isDownloadingCert}
+                className="w-full md:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shrink-0"
+                title="Descargar el Certificado Consolidado Oficial con ambas actividades"
+              >
+                <Download className={`w-4 h-4 ${isDownloadingCert ? 'animate-bounce' : ''}`} />
+                <span>{isDownloadingCert ? 'Generando PDF Consolidado...' : 'Descargar Certificado Consolidado 📜'}</span>
+              </button>
+            </div>
+
+            {/* Ficha Resumen de Datos que van en el Certificado */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3 border-t border-amber-500/20 text-xs">
+              {/* 1. Nombre del Aprendiz */}
+              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                  1. Nombre del Aprendiz
+                </span>
+                <span className="font-extrabold text-white truncate block text-xs">
+                  {fullName || initialData.fullName || 'Aprendiz SENA'}
+                </span>
+              </div>
+
+              {/* 2. Tiempo Trabajado */}
+              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-cyan-400" /> 2. Tiempo Trabajado
+                </span>
+                <span className="font-mono font-extrabold text-cyan-300 block text-xs">
+                  {timeWorkedFormatted || '0 min 0 seg'}
+                </span>
+              </div>
+
+              {/* 3. Actividades Realizadas */}
+              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-emerald-400" /> 3. Realizadas ({completedCount}/2)
+                </span>
+                <div className="text-[11px] font-semibold text-emerald-300 space-y-0.5 truncate">
+                  {act1Completed && act2Completed ? (
+                    <span>Ambas: Fotos 30 + Audio 20</span>
+                  ) : act1Completed ? (
+                    <span>Actividad 1 (Reto Fotos)</span>
+                  ) : act2Completed ? (
+                    <span>Actividad 2 (Audio 20)</span>
+                  ) : (
+                    <span className="text-slate-400 font-normal">0 realizadas aún</span>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. Actividades No Realizadas */}
+              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider flex items-center gap-1">
+                  <Circle className="w-3 h-3 text-amber-400" /> 4. No Realizadas ({2 - completedCount}/2)
+                </span>
+                <div className="text-[11px] font-semibold text-amber-300 space-y-0.5 truncate">
+                  {2 - completedCount === 0 ? (
+                    <span className="text-emerald-400">¡Ninguna pendiente! (100%)</span>
+                  ) : !act1Completed && !act2Completed ? (
+                    <span>Act. 1 y Act. 2 pendientes</span>
+                  ) : !act1Completed ? (
+                    <span>Actividad 1 pendiente</span>
+                  ) : (
+                    <span>Actividad 2 pendiente</span>
+                  )}
+                </div>
+              </div>
+
+              {/* 5. Fecha y Programa */}
+              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-0.5 sm:col-span-2 lg:col-span-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-slate-400" /> 5. Fecha y Programa
+                </span>
+                <span className="font-semibold text-slate-200 truncate block text-[11px]">
+                  {new Date().toLocaleDateString('es-CO')} • {ficha || initialData.ficha || 'Gestión Contable'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -324,36 +398,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               </div>
 
               {/* Action Buttons for Activity 1 */}
-              <div className="space-y-2 pt-2 border-t border-slate-800/80">
-                {/* CERTIFICATE DOWNLOAD BUTTON (ALWAYS ENABLED) */}
-                <button
-                  type="button"
-                  id="btn-download-cert-act1-welcome"
-                  onClick={() => handleTriggerCertificate('activity1')}
-                  disabled={downloadingType === 'activity1'}
-                  className={`w-full py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider font-extrabold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
-                    act1Completed
-                      ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 shadow-amber-500/20 active:scale-95'
-                      : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30'
-                  }`}
-                  title={act1Completed ? 'Descargar Certificado Oficial de Aprobación' : 'Descargar Certificado (Habilitado con tus datos actuales)'}
-                >
-                  <Download className={`w-4 h-4 ${downloadingType === 'activity1' ? 'animate-bounce' : ''}`} />
-                  <span>
-                    {downloadingType === 'activity1' 
-                      ? 'Generando Certificado PDF...' 
-                      : act1Completed 
-                      ? 'Descargar Certificado PDF 📜' 
-                      : 'Descargar Certificado de Aprendiz 📜'}
-                  </span>
-                </button>
-
+              <div className="pt-2 border-t border-slate-800/80">
                 {/* Start / Continue / Retry Button */}
                 <button
                   type="button"
                   id="btn-launch-act1-status"
                   onClick={() => handleLaunch('activity1')}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-md"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-md"
                 >
                   <Layers className="w-4 h-4" />
                   <span>
@@ -453,36 +504,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               </div>
 
               {/* Action Buttons for Activity 2 */}
-              <div className="space-y-2 pt-2 border-t border-slate-800/80">
-                {/* CERTIFICATE DOWNLOAD BUTTON (ALWAYS ENABLED) */}
-                <button
-                  type="button"
-                  id="btn-download-cert-act2-welcome"
-                  onClick={() => handleTriggerCertificate('activity2')}
-                  disabled={downloadingType === 'activity2'}
-                  className={`w-full py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider font-extrabold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
-                    act2Completed
-                      ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 shadow-amber-500/20 active:scale-95'
-                      : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30'
-                  }`}
-                  title={act2Completed ? 'Descargar Certificado Oficial de Aprobación' : 'Descargar Certificado (Habilitado con tus datos actuales)'}
-                >
-                  <Download className={`w-4 h-4 ${downloadingType === 'activity2' ? 'animate-bounce' : ''}`} />
-                  <span>
-                    {downloadingType === 'activity2' 
-                      ? 'Generando Certificado PDF...' 
-                      : act2Completed 
-                      ? 'Descargar Certificado PDF 📄' 
-                      : 'Descargar Certificado de Aprendiz 📄'}
-                  </span>
-                </button>
-
+              <div className="pt-2 border-t border-slate-800/80">
                 {/* Start / Continue / Retry Button */}
                 <button
                   type="button"
                   id="btn-launch-act2-status"
                   onClick={() => handleLaunch('activity2')}
-                  className="w-full py-2.5 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-md"
+                  className="w-full py-3 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-md"
                 >
                   <Headphones className="w-4 h-4" />
                   <span>

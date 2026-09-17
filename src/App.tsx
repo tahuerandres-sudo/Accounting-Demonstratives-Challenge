@@ -22,10 +22,15 @@ import {
   Activity2Result,
   Activity2SentenceRecord,
   SavedAppState,
-  ActivitiesStatusSummary
+  ActivitiesStatusSummary,
+  ConsolidatedCertificateData
 } from './types';
 import { getFreshQuestionPool } from './data/questions';
-import { downloadAnyCertificatePdf } from './utils/pdfGenerator';
+import { 
+  downloadAnyCertificatePdf, 
+  downloadConsolidatedCertificatePdf, 
+  formatTimeWorked 
+} from './utils/pdfGenerator';
 
 const SESSION_STORAGE_KEY = 'accounting_session_state';
 const APPRENTICE_STORAGE_KEY = 'accounting_apprentice_data';
@@ -135,6 +140,19 @@ export default function App() {
     return initialSession?.activity2Result || null;
   });
 
+  // --- TIME WORKED TRACKER ---
+  const [totalTimeWorkedSeconds, setTotalTimeWorkedSeconds] = useState<number>(() => {
+    return initialSession?.totalTimeWorkedSeconds || 0;
+  });
+
+  // Track active working time across session
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTotalTimeWorkedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // History records state for completion tracking & certificates
   const [historyRecords, setHistoryRecords] = useState<any[]>(() => {
     try {
@@ -169,6 +187,9 @@ export default function App() {
             const p: SavedAppState = data.progress;
             if (p.apprentice?.fullName) {
               setApprentice(p.apprentice);
+            }
+            if (p.totalTimeWorkedSeconds) {
+              setTotalTimeWorkedSeconds(p.totalTimeWorkedSeconds);
             }
             if (p.activity1 && p.activity1.questions?.length) {
               setQuestions(p.activity1.questions);
@@ -205,6 +226,7 @@ export default function App() {
       lastUpdated: Date.now(),
       currentScreen,
       apprentice,
+      totalTimeWorkedSeconds,
       activity1: {
         questions,
         currentIndex,
@@ -336,12 +358,86 @@ export default function App() {
     activity2CompletedRecords.length,
   ]);
 
-  // Handler to download any certificate
-  const handleDownloadCertificate = async (record: any) => {
+  // Helper to format worked time
+  const timeWorkedFormatted = useMemo(() => {
+    return formatTimeWorked(totalTimeWorkedSeconds);
+  }, [totalTimeWorkedSeconds]);
+
+  // Unified Consolidated Certificate Data (Single Official Certificate)
+  const getConsolidatedCertificateData = (customInfo?: any): ConsolidatedCertificateData => {
+    // Check Activity 1 status
+    const act1History = historyRecords.find(
+      (r: any) => (!r.activityType || r.activityType === 'activity1') && (r.streakAchieved >= 30 || r.score >= 70)
+    ) || historyRecords.find((r: any) => !r.activityType || r.activityType === 'activity1');
+
+    const act1Res = finalResult || (act1History as AttemptResult | undefined) || null;
+    const isAct1Done = Boolean(finalResult || (act1History && (act1History.streakAchieved >= 30 || act1History.score >= 70)));
+
+    // Check Activity 2 status
+    const act2History = historyRecords.find((r: any) => r.activityType === 'activity2');
+    const act2Res = activity2Result || (act2History as Activity2Result | undefined) || null;
+    const isAct2Done = Boolean(activity2Result || act2History);
+
+    const completedActs: ConsolidatedCertificateData['activitiesCompleted'] = {};
+    const pendingActs: string[] = [];
+
+    if (isAct1Done && act1Res) {
+      completedActs.activity1 = {
+        title: 'Reto de Fotografías Contables (30 in a row)',
+        score: act1Res.score || 100,
+        streak: act1Res.streakAchieved || 30,
+        date: act1Res.date || new Date().toLocaleDateString('es-CO'),
+      };
+    } else {
+      pendingActs.push('Actividad 1: Reto de Fotografías (Requiere 30 aciertos consecutivos)');
+    }
+
+    if (isAct2Done && act2Res) {
+      completedActs.activity2 = {
+        title: 'Audio & Sentence Builder (20 frases cortas)',
+        completedSentences: act2Res.score || act2Res.totalSentences || 20,
+        totalSentences: 20,
+        percentage: act2Res.percentage || 100,
+        date: act2Res.date || new Date().toLocaleDateString('es-CO'),
+      };
+    } else {
+      pendingActs.push('Actividad 2: Audio & Sentence Builder (Requiere 20 frases de audio)');
+    }
+
+    const doneCount = (isAct1Done ? 1 : 0) + (isAct2Done ? 1 : 0);
+    const overallPercentage = Math.round((doneCount / 2) * 100);
+
+    const todayStr = new Date().toLocaleDateString('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+    const candidateName = customInfo?.apprenticeName || apprentice.fullName || 'Aprendiz SENA';
+    const candidateProgram = customInfo?.program || apprentice.program || 'Gestión Contable y de Información Financiera';
+    const candidateFicha = customInfo?.ficha || apprentice.ficha || 'N/A';
+
+    return {
+      apprenticeName: candidateName,
+      program: candidateProgram,
+      ficha: candidateFicha,
+      date: todayStr,
+      timeWorkedFormatted,
+      timeWorkedSeconds: totalTimeWorkedSeconds,
+      activitiesCompleted: completedActs,
+      activitiesPending: pendingActs,
+      overallPercentage,
+      overallStatus: doneCount === 2 ? 'completed' : doneCount === 1 ? 'partial' : 'started',
+    };
+  };
+
+  // Handler to download the single consolidated certificate
+  const handleDownloadCertificate = async (customRecord?: any) => {
     try {
-      await downloadAnyCertificatePdf(record);
+      const certData = getConsolidatedCertificateData(customRecord);
+      await downloadConsolidatedCertificatePdf(certData);
     } catch (err) {
-      console.error('Error downloading certificate:', err);
+      console.error('Error downloading consolidated certificate:', err);
     }
   };
 
@@ -626,6 +722,8 @@ export default function App() {
             initialData={apprentice}
             activeSession={activeSessionInfo}
             activitiesStatus={activitiesStatus}
+            timeWorkedFormatted={timeWorkedFormatted}
+            timeWorkedSeconds={totalTimeWorkedSeconds}
             onDownloadCertificate={handleDownloadCertificate}
             onResumeSession={handleResumeSession}
             onResetSession={handleResetSession}
@@ -659,6 +757,7 @@ export default function App() {
             onPlayAgain={() => handleStartChallenge(apprentice)}
             onOpenHistory={() => setIsHistoryOpen(true)}
             onGoHome={handleGoHome}
+            onDownloadCertificate={() => handleDownloadCertificate()}
           />
         )}
 
@@ -686,6 +785,7 @@ export default function App() {
             }}
             onGoToActivity1={() => handleStartChallenge(apprentice)}
             onGoHome={handleGoHome}
+            onDownloadCertificate={() => handleDownloadCertificate()}
           />
         )}
       </main>

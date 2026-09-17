@@ -17,7 +17,7 @@ import {
   Layers
 } from 'lucide-react';
 import { Activity2Result, ApprenticeData } from '../types';
-import { createCertificatePdfBytes } from '../utils/pdfGenerator';
+import { downloadAnyCertificatePdf } from '../utils/pdfGenerator';
 import { speakSentence } from '../utils/speech';
 
 interface Activity2ResultsScreenProps {
@@ -27,6 +27,7 @@ interface Activity2ResultsScreenProps {
   onRestartActivity2: () => void;
   onGoToActivity1: () => void;
   onGoHome: () => void;
+  onDownloadCertificate?: () => void;
 }
 
 export const Activity2ResultsScreen: React.FC<Activity2ResultsScreenProps> = ({
@@ -36,6 +37,7 @@ export const Activity2ResultsScreen: React.FC<Activity2ResultsScreenProps> = ({
   onRestartActivity2,
   onGoToActivity1,
   onGoHome,
+  onDownloadCertificate,
 }) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [playingSentenceIdx, setPlayingSentenceIdx] = useState<number | null>(null);
@@ -52,32 +54,15 @@ export const Activity2ResultsScreen: React.FC<Activity2ResultsScreenProps> = ({
     });
   };
 
-  // Generate and download Activity 2 PDF Certificate
+  // Generate and download Consolidated PDF Certificate
   const handleDownloadCertificate = async () => {
     try {
       setIsGeneratingPdf(true);
-      const pdfBytes = await createCertificatePdfBytes({
-        apprenticeName: result.apprenticeName,
-        program: result.program,
-        ficha: result.ficha,
-        score: result.score,
-        percentage: result.percentage,
-        date: result.date,
-        performanceLabel: result.performanceLabel,
-        activityType: 'activity2',
-        customCommendation1: 'For successfully listening to and correctly assembling all 20 accounting sentences in English and',
-        customCommendation2: 'demonstrating auditory mastery of demonstrative pronouns and financial terminology.',
-      });
-
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `SENA_Certificado_Activity2_${result.apprenticeName.replace(/\s+/g, '_')}_Ficha_${result.ficha}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      if (onDownloadCertificate) {
+        await onDownloadCertificate();
+      } else {
+        await downloadAnyCertificatePdf(result);
+      }
     } catch (error) {
       console.error('Error generating PDF certificate:', error);
       alert('Error generando el certificado en PDF. Por favor reintenta.');
@@ -146,7 +131,7 @@ export const Activity2ResultsScreen: React.FC<Activity2ResultsScreenProps> = ({
           className="p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
         >
           <Download className="w-5 h-5" />
-          <span>{isGeneratingPdf ? 'Generando PDF...' : 'Descargar Certificado PDF 📄'}</span>
+          <span>{isGeneratingPdf ? 'Generando PDF Consolidado...' : 'Descargar Certificado Consolidado 📜'}</span>
         </button>
 
         {/* Restart Activity 2 */}

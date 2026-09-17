@@ -30,6 +30,7 @@ interface ResultsScreenProps {
   onPlayAgain: () => void;
   onOpenHistory: () => void;
   onGoHome: () => void;
+  onDownloadCertificate?: () => void;
 }
 
 export const ResultsScreen: React.FC<ResultsScreenProps> = ({
@@ -39,6 +40,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   onPlayAgain,
   onOpenHistory,
   onGoHome,
+  onDownloadCertificate,
 }) => {
   const [downloading, setDownloading] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -67,7 +69,11 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
     setDownloading(true);
     setDownloadSuccess(false);
     try {
-      await downloadCertificatePdf(result);
+      if (onDownloadCertificate) {
+        await onDownloadCertificate();
+      } else {
+        await downloadCertificatePdf(result);
+      }
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 5000);
     } catch (err) {
@@ -229,7 +235,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
             className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-sm sm:text-base uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <Download className={`w-5 h-5 ${downloading ? 'animate-bounce' : ''}`} />
-            <span>{downloading ? 'GENERATING PDF...' : 'DOWNLOAD CERTIFICATE 📜'}</span>
+            <span>{downloading ? 'GENERANDO PDF CONSOLIDADO...' : 'DESCARGAR CERTIFICADO CONSOLIDADO 📜'}</span>
           </button>
 
           {/* TRY AGAIN 🔄 / PLAY AGAIN 🔄 */}
